@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulador FAIR · Monte Carlo</title>
+<meta name="description" content="Simulador Monte Carlo de pérdida anual con FAIR: mové las métricas y mirá cómo cambian el ALE, el VaR, el TVaR y el ROSI de un control.">
+<style>
+:root{
+  --bg:#070820;--card:rgba(255,255,255,.05);--line:rgba(255,255,255,.13);
+  --green:#03FF9E;--coral:#FF5A36;--amber:#FFC53D;--blue:#4C86FF;--violet:#B78CFF;
+  --ink:#EEF1FF;--ink2:#C3C9EE;--mute:#8A92C4;
+  --h:'Bahnschrift','DIN Alternate','Segoe UI',system-ui,sans-serif;
+  --b:'Segoe UI','Helvetica Neue',system-ui,-apple-system,sans-serif;
+  --m:'Cascadia Code','Consolas','SF Mono','Menlo',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:radial-gradient(900px 500px at 90% -10%,rgba(0,84,242,.28),transparent 60%),radial-gradient(700px 500px at -10% 110%,rgba(3,255,158,.08),transparent 60%),var(--bg);
+  color:var(--ink);font-family:var(--b);min-height:100vh;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 16px 40px}
+header .tag{font-family:var(--m);font-size:13px;color:var(--green);letter-spacing:.5px;text-transform:uppercase}
+header h1{font-family:var(--h);font-size:clamp(26px,6vw,44px);line-height:1.05;margin:8px 0 8px}
+header p{color:var(--ink2);font-size:15px;line-height:1.5;max-width:760px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:18px}
+.grid>*{min-width:0}
+body{overflow-x:hidden}
+@media(min-width:900px){.grid{grid-template-columns:400px minmax(0,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px}
+.k{font-family:var(--m);font-size:12px;letter-spacing:2px;color:var(--mute);text-transform:uppercase}
+.k.g{color:var(--green)}.k.c{color:var(--coral)}
+.sl{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;margin-top:12px}
+.sl label{font-size:15px;color:var(--ink2)}
+.sl label small{color:var(--mute);font-size:12px;margin-left:4px}
+.sl output{font-family:var(--m);font-size:15px;color:var(--ink);text-align:right}
+.sl input{grid-column:1 / span 2;width:100%;accent-color:var(--coral);height:28px}
+.sl.c input{accent-color:var(--green)}
+.lm{font-family:var(--m);font-size:13px;color:var(--mute);border-top:1px dashed var(--line);margin-top:12px;padding-top:10px;line-height:1.5}
+.sep{height:14px}
+button.rst{margin-top:14px;width:100%;font-family:var(--m);font-size:14px;padding:11px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink2);cursor:pointer}
+.kp{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:620px){.kp{grid-template-columns:repeat(4,1fr)}}
+.kp>div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.kp .v{font-family:var(--h);font-size:clamp(20px,4.6vw,30px);margin-top:4px}
+.kp .d{font-family:var(--m);font-size:12px;color:var(--mute);margin-top:4px}
+.kp .ale .v{color:var(--green)}.kp .var .v{color:var(--coral)}.kp .tvar .v{color:var(--amber)}.kp .rosi .v{color:var(--blue)}
+.chart{margin-top:12px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:14px;padding:6px}
+.chart svg{display:block;width:100%;height:auto}
+.note{font-family:var(--m);font-size:12px;color:var(--mute);line-height:1.55;margin-top:10px}
+.try{margin-top:16px}
+.try li{color:var(--ink2);font-size:14px;line-height:1.5;margin:6px 0 0 18px}
+.busy{opacity:.55;transition:opacity .15s}
+footer{margin-top:26px;color:var(--mute);font-size:12px;line-height:1.6;font-family:var(--m)}
+footer a{color:var(--ink2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="tag">&lt;/ monte carlo en vivo · 100.000 años · semilla fija &gt;</div>
+    <h1>Movés una métrica, cambia la curva.</h1>
+    <p>Un servicio crítico, hoy y con un control de detección y respuesta (XDR + SOAR). Cada movimiento simula 100.000 años en tu teléfono: frecuencia Poisson y severidad LogNormal. Los números de partida son los del ejemplo del taller y son ilustrativos.</p>
+  </header>
+
+  <div class="grid">
+    <section class="card" id="ctl">
+      <div class="k c">Hoy</div>
+      <div class="sl"><label>TEF<small>intentos por año</small></label><output for="tef"></output><input type="range" name="tef" min="10" max="300" step="5"></div>
+      <div class="sl"><label>P(éxito)<small>vulnerabilidad</small></label><output for="p0"></output><input type="range" name="p0" min="0.5" max="10" step="0.5"></div>
+      <div class="sl"><label>Caída por evento</label><output for="dt0"></output><input type="range" name="dt0" min="0" max="600" step="10"></div>
+      <div class="sl"><label>CPMD<small>USD por minuto</small></label><output for="cpmd"></output><input type="range" name="cpmd" min="0" max="5000" step="50"></div>
+      <div class="sl"><label>Otros costos<small>por evento</small></label><output for="otros"></output><input type="range" name="otros" min="0" max="1000" step="25"></div>
+      <div class="sl"><label>σ de la severidad<small>qué tan larga es la cola</small></label><output for="sg"></output><input type="range" name="sg" min="0.2" max="1.6" step="0.05"></div>
+      <div class="lm" data-lm="0"></div>
+      <div class="sep"></div>
+      <div class="k g">Con XDR + SOAR</div>
+      <div class="sl c"><label>P(éxito)</label><output for="p1"></output><input type="range" name="p1" min="0.5" max="10" step="0.5"></div>
+      <div class="sl c"><label>Caída por evento</label><output for="dt1"></output><input type="range" name="dt1" min="0" max="600" step="10"></div>
+      <div class="sl c"><label>Costo anual del control</label><output for="costo"></output><input type="range" name="costo" min="25" max="1500" step="25"></div>
+      <div class="lm" data-lm="1"></div>
+      <button class="rst" data-reset>↺ volver a los supuestos del ejemplo</button>
+    </section>
+
+    <section>
+      <div class="kp" id="kp">
+        <div class="ale"><div class="k">ALE</div><div class="v">…</div><div class="d"></div></div>
+        <div class="var"><div class="k">VaR 95%</div><div class="v">…</div><div class="d"></div></div>
+        <div class="tvar"><div class="k">TVaR 95%</div><div class="v">…</div><div class="d"></div></div>
+        <div class="rosi"><div class="k">ROSI</div><div class="v">…</div><div class="d"></div></div>
+      </div>
+      <div class="chart" id="chart"></div>
+      <div class="note">Las tarjetas muestran el escenario con el control y, abajo, el de hoy. ALE: pérdida anual promedio. VaR 95%: el peor 5% de los años empieza ahí. TVaR 95%: el promedio de ese 5%. ROSI = (ALE de hoy − ALE con control − costo) / costo. Los dos escenarios usan los mismos números aleatorios: la diferencia es sólo el control.</div>
+      <div class="card try">
+        <div class="k g">Para probar</div>
+        <ul>
+          <li>Poné la P(éxito) con control igual a la de hoy (3%): el control sólo acorta la caída. ¿Sigue dando positivo el ROSI?</li>
+          <li>Subí la σ de la severidad: el ALE casi no se mueve, el VaR y el TVaR se disparan.</li>
+          <li>Subí el costo anual hasta que el ROSI llegue a cero: ese es el máximo que vale la pena pagar por el control.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <footer>Taller FAIR · Safe-U. Modelo: N ~ Poisson(TEF × P(éxito)); severidad LogNormal con media = caída × CPMD + otros costos y desvío σ en escala logarítmica. VaR y TVaR sobre la pérdida anual, no del evento. Números ilustrativos, no corresponden a ninguna organización.</footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var NSIM = 100000;
+  var DEF = { tef: 100, p0: 3, dt0: 180, cpmd: 1250, otros: 175, sg: 0.9, p1: 1.5, dt1: 60, costo: 400 };
+  var COL = { g: '#03FF9E', co: '#FF5A36', ink2: '#C3C9EE', mu: '#8A92C4', grid: 'rgba(255,255,255,.08)' };
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function dec(v, d) { return v.toFixed(d).replace('.', ','); }
+  function thou(v) { return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function fmtUSD(v) { var a = Math.abs(v); if (a >= 1e6) return 'USD ' + dec(v / 1e6, a >= 1e7 ? 1 : 2) + 'M'; if (a >= 1e3) return 'USD ' + Math.round(v / 1e3) + 'K'; return 'USD ' + Math.round(v); }
+  function lnParams(mean, sg) { return { mu: Math.log(mean) - sg * sg / 2, sg: sg }; }
+  function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function normal(r) { var u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+  function poisInv(lam, u) { var k = 0, p = Math.exp(-lam), c = p; while (u > c && k < 400) { k++; p *= lam / k; c += p; } return k; }
+  function simYears(n, seed, lam, mean, sg) {
+    var p = lnParams(mean, sg), out = new Float64Array(n);
+    for (var y = 0; y < n; y++) {
+      var r = mulberry(seed * 2654435761 + y * 40503 + 7), k = poisInv(lam, r()), tot = 0;
+      for (var j = 0; j < k; j++) tot += Math.exp(p.mu + p.sg * normal(r));
+      out[y] = tot;
+    }
+    return out;
+  }
+  function stats(arr) {
+    var a = Float64Array.from(arr).sort(), n = a.length, s = 0, k95 = Math.floor(0.95 * n), st = 0, j;
+    for (j = 0; j < n; j++) s += a[j];
+    for (j = k95; j < n; j++) st += a[j];
+    return { sorted: a, ale: s / n, var95: a[k95], tvar95: st / (n - k95), p995: a[Math.floor(0.995 * n)] };
+  }
+  var root = $('#ctl'), ins = $$('input[type=range]', root), R0 = null, R1 = null, timer = null;
+  function val(k) { return +$('input[name=' + k + ']', root).value; }
+  function fmtIn(k, v) {
+    if (k === 'p0' || k === 'p1') return dec(v, 1) + '%';
+    if (k === 'dt0' || k === 'dt1') return v + ' min';
+    if (k === 'cpmd') return 'USD ' + thou(v);
+    if (k === 'otros' || k === 'costo') return 'USD ' + v + 'K';
+    if (k === 'sg') return dec(v, 2);
+    return String(v);
+  }
+  function labels() { ins.forEach(function (e) { var o = $('output[for=' + e.name + ']', root); if (o) o.textContent = fmtIn(e.name, +e.value); }); }
+  function run() {
+    labels();
+    var lam0 = val('tef') * val('p0') / 100, lam1 = val('tef') * val('p1') / 100;
+    var lm0 = val('dt0') * val('cpmd') + val('otros') * 1000, lm1 = val('dt1') * val('cpmd') + val('otros') * 1000, sg = val('sg');
+    $('[data-lm="0"]').textContent = 'LEF ' + dec(lam0, 2) + ' por año · LM ' + fmtUSD(lm0) + ' → ALE ≈ ' + fmtUSD(lam0 * lm0);
+    $('[data-lm="1"]').textContent = 'LEF ' + dec(lam1, 2) + ' por año · LM ' + fmtUSD(lm1) + ' → ALE ≈ ' + fmtUSD(lam1 * lm1);
+    R0 = stats(simYears(NSIM, 7, lam0, Math.max(lm0, 1), sg));
+    R1 = stats(simYears(NSIM, 7, lam1, Math.max(lm1, 1), sg));
+    var c = val('costo') * 1000, rosi = (R0.ale - R1.ale - c) / c;
+    function kp(cls, a, b) { var e = $('#kp .' + cls); $('.v', e).textContent = a; $('.d', e).textContent = b; }
+    kp('ale', fmtUSD(R1.ale), 'hoy ' + fmtUSD(R0.ale));
+    kp('var', fmtUSD(R1.var95), 'hoy ' + fmtUSD(R0.var95));
+    kp('tvar', fmtUSD(R1.tvar95), 'hoy ' + fmtUSD(R0.tvar95));
+    kp('rosi', (rosi >= 0 ? '+' : '−') + Math.round(Math.abs(rosi) * 100) + '%', 'ΔALE ' + fmtUSD(R0.ale - R1.ale) + ' − costo');
+    draw();
+    document.body.classList.remove('busy');
+  }
+  function svgEl(tag, at, parent) { var e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (var k in at) e.setAttribute(k, at[k]); if (parent) parent.appendChild(e); return e; }
+  function txt(s, x, y, t, o) { o = o || {}; var e = svgEl('text', { x: x, y: y, fill: o.fill || COL.mu, 'font-size': o.fs || 13, 'text-anchor': o.a || 'start', 'font-family': o.ff || 'Consolas, monospace', 'font-weight': o.fw || 400 }, s); e.textContent = t; return e; }
+  function draw() {
+    if (!R0) return;
+    var host = $('#chart'); host.innerHTML = ''; var W = Math.max(300, Math.round(host.clientWidth - 12)), H = Math.round(W < 600 ? W * 0.85 : W * 0.55), sm = W < 600;
+    var s = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Curva de excedencia de la pérdida anual, hoy y con el control' }, host);
+    var L = sm ? 46 : 74, R = W - 12, T0 = 22, B = H - 52, top = Math.max(R0.p995, 1);
+    function X(v) { return L + Math.min(v, top) / top * (R - L); } function Y(p) { return B - p * (B - T0); }
+    [0, .25, .5, .75, 1].forEach(function (p) { svgEl('line', { x1: L, x2: R, y1: Y(p), y2: Y(p), stroke: COL.grid }, s); txt(s, L - 8, Y(p) + 5, Math.round(p * 100) + '%', { a: 'end', fs: sm ? 12 : 15 }); });
+    var stp = (sm && top > 2e6) ? 1e6 : top > 4e6 ? 1e6 : top > 2e6 ? 5e5 : top > 8e5 ? 2e5 : 1e5, v;
+    for (v = 0; v <= top; v += stp) txt(s, X(v), B + 24, v ? (v >= 1e6 ? dec(v / 1e6, v % 1e6 ? 1 : 0) + 'M' : v / 1e3 + 'K') : '0', { a: 'middle', fs: sm ? 12 : 15 });
+    txt(s, (L + R) / 2, H - 8, 'Probabilidad de perder más que x (USD) en un año', { fill: COL.ink2, fs: sm ? 12 : 15, a: 'middle', ff: 'Segoe UI, sans-serif' });
+    [[R0, COL.co, 'Hoy'], [R1, COL.g, 'Con XDR + SOAR']].forEach(function (q, k) {
+      var a = q[0].sorted, n = a.length, d = '', pts = 140;
+      for (var j = 0; j <= pts; j++) { var x = top * j / pts, lo = 0, hi = n; while (lo < hi) { var mid = (lo + hi) >> 1; if (a[mid] <= x) lo = mid + 1; else hi = mid; } d += (j ? 'L' : 'M') + X(x).toFixed(1) + ' ' + Y((n - lo) / n).toFixed(1); }
+      svgEl('path', { d: d, fill: 'none', stroke: q[1], 'stroke-width': 3.5 }, s);
+      svgEl('line', { x1: X(q[0].var95), x2: X(q[0].var95), y1: Y(0.05) - 24, y2: B, stroke: q[1], 'stroke-width': 1.6, 'stroke-dasharray': '6 6' }, s);
+      txt(s, R - 6, T0 + 22 + k * 22, '— ' + q[2], { fill: q[1], fs: sm ? 14 : 17, fw: 700, a: 'end' });
+    });
+    svgEl('line', { x1: L, x2: R, y1: Y(0.05), y2: Y(0.05), stroke: 'rgba(255,255,255,.35)', 'stroke-dasharray': '4 6' }, s);
+    txt(s, R - 6, Y(0.05) - 7, '5%: ahí se lee el VaR 95', { fs: sm ? 11 : 13, a: 'end' });
+  }
+  function schedule() { labels(); document.body.classList.add('busy'); clearTimeout(timer); timer = setTimeout(run, 140); }
+  function setDefaults() { for (var k in DEF) { var e = $('input[name=' + k + ']', root); if (e) e.value = DEF[k]; } }
+  ins.forEach(function (e) { e.addEventListener('input', schedule); });
+  var rz = null; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(draw, 150); });
+  $('[data-reset]').onclick = function () { setDefaults(); schedule(); };
+  setDefaults(); labels(); setTimeout(run, 30);
+})();
+</script>
+</body>
+</html>

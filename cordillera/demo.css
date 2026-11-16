@@ -1,0 +1,391 @@
+/* Demo en vivo · Banco Cordillera — portada del deck de ISACA (web/deck.css), con el tema del deck de la Eko.
+ * Se dibuja en un lienzo de 1280×720 escalado ×1,5 (= 1920×1080): los tamaños son los originales.
+ * Clases renombradas para no chocar con el deck: tn→dtn, op→dop, hl→dhl, mag→dmag, lbl→dlbl. */
+.demo-slide{padding:0!important;
+  --blue:#0054F2;--navy:#090B52;--green:#03FF9E;--ink:#293033;--deep:#05062E;--mag:#B3005C;--greend:#0AA06E;--amber:#C97A00;
+  --n50:#F6F7F9;--n100:#ECEEF2;--n200:#D8DCE3;--n300:#B5BAC3;--n400:#8A909B;--n500:#5B616B;--cloud:#EAF0FF;--lilac:#A9B6EF;--pale:#C9D4FF;
+  --f:'Segoe UI','Helvetica Neue',system-ui,sans-serif;--fm:'Cascadia Code','Consolas',ui-monospace,monospace;--fh:'Bahnschrift','DIN Alternate','Segoe UI',sans-serif;
+  font-family:var(--f);color:var(--ink)}
+.demo-slide .demo-wrap{position:absolute;left:0;top:0;width:1280px;height:720px;transform:scale(1.5);transform-origin:0 0}
+.demo-slide button{font-family:var(--f)}
+.demo-slide .foot{display:none}
+/* piloto automático */
+.dm-auto{position:static;white-space:nowrap;font-family:var(--fm);font-size:11px;font-weight:700;color:var(--n400);
+  background:var(--n50);border:1px solid var(--n200);border-radius:20px;padding:4px 12px;cursor:pointer;display:flex;gap:7px;align-items:center}
+.dm-auto::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--n300)}
+.dm-auto.on{color:var(--greend);border-color:rgba(10,160,110,.4)}
+.dm-auto.on::before{background:var(--greend);animation:blink 1.2s steps(1) infinite}
+.dm-c.drag label{color:var(--blue)}
+.dm-c.dmag.drag label{color:var(--mag)}
+.tree svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dtn {
+  position: absolute; transform: translateX(-50%); text-align: center;
+  border-radius: 10px; border: 1px solid var(--n200); background: #fff;
+  padding: 8px 6px; z-index: 2; transition: box-shadow .2s, transform .2s;
+}
+.dtn .sg { display: block; font-family: var(--fm); font-size: 11px; font-weight: 700; color: var(--blue); letter-spacing: .04em; }
+.dtn .nm { display: block; font-weight: 700; font-size: 14.5px; color: var(--navy); margin-top: 2px; line-height: 1.1; }
+.dtn small { display: block; font-weight: 400; font-size: 10.5px; color: var(--n500); margin-top: 2px; }
+.dtn.lv0 { background: var(--navy); border-color: var(--navy); }
+.dtn.lv0 .sg { color: var(--green); }
+.dtn.lv0 .nm { color: #fff; font-size: 14px; }
+.dtn.lv0 small { color: var(--lilac); }
+.dtn.lv1 { background: var(--blue); border-color: var(--blue); }
+.dtn.lv1 .sg { color: var(--green); }
+.dtn.lv1 .nm { color: #fff; }
+.dtn.lv1 small { color: var(--cloud); }
+.dtn.lv3 { background: var(--n50); }
+.dop {
+  position: absolute; transform: translate(-50%, -50%); z-index: 3;
+  width: 24px; height: 24px; border-radius: 50%; background: #fff;
+  border: 1px solid var(--n200); display: grid; place-items: center;
+  font-family: var(--fm); font-size: 11px; font-weight: 700; color: var(--blue);
+}
+.demo { position: absolute; inset: 0; padding: 20px 34px 16px; display: flex; flex-direction: column; }
+/* El encabezado se mantiene en UNA línea pase lo que pase: al sumarle el selector
+   de modos se partía en dos y esa altura se la robaba al panel de detalle, que
+   quedaba cortado a mitad de renglón. */
+.dm-head { display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px; flex-wrap: nowrap; gap: 14px; }
+.dm-head > div:first-child { min-width: 0; display: flex; align-items: baseline; }
+.dm-t { font-size: 23px; font-weight: 800; color: var(--navy); letter-spacing: -.02em;
+  flex: 0 0 auto; }
+.dm-s { font-size: 14px; color: var(--n500); margin-left: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dm-act { font-size: 15px; font-weight: 700; color: var(--n400); font-family: var(--fm);
+  white-space: nowrap; flex: 0 0 auto; }
+.dm-act.on { color: var(--greend); }
+
+.dm-main { flex: 1; display: grid; grid-template-columns: 1.02fr 1fr; gap: 20px; min-height: 0; }
+.dm-left, .dm-right { display: flex; flex-direction: column; min-height: 0; }
+
+.dm-tree { position: relative; height: 244px; flex: 0 0 auto; }
+.dm-tree svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dm-n { cursor: pointer; padding: 8px 6px; transition: box-shadow .18s; }
+.dm-n .sg { font-size: 11px; }
+.dm-n .nm { font-size: 17px; letter-spacing: -.01em; }
+.dm-n small { font-size: 10.5px; }
+.dm-n:hover { box-shadow: 0 6px 20px rgba(9, 11, 82, .18); }
+.dm-n.sel { box-shadow: 0 0 0 3px rgba(0, 84, 242, .38); }
+.dm-n.lv0.sel, .dm-n.lv1.sel { box-shadow: 0 0 0 3px rgba(3, 255, 158, .6); }
+
+.dm-det {
+  flex: 1; margin-top: 12px; background: var(--n50); border-radius: 10px;
+  padding: 14px 18px; overflow: hidden; border-left: 5px solid var(--blue);
+}
+.dm-det h5 { font-size: 16.5px; font-weight: 800; color: var(--navy); margin-bottom: 5px; }
+.dm-det p { font-size: 13px; line-height: 1.38; color: var(--n500); margin-bottom: 10px; }
+.dm-det table { width: 100%; border-collapse: collapse; }
+.dm-det td { font-size: 13.5px; padding: 4px 0; color: var(--ink); }
+.dm-det td:last-child { text-align: right; font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }
+.dm-det tr.tot td { border-top: 1px solid var(--n200); padding-top: 6px; font-weight: 800; color: var(--navy); }
+.dm-det tr.tot td:last-child { color: var(--navy); }
+.dm-det em { display: block; font-size: 12px; color: var(--n400); font-style: italic; margin-top: 9px; }
+
+.dm-tabs { display: flex; gap: 6px; flex: 0 0 auto; margin-bottom: 8px; }
+.dm-tabs button {
+  font-family: var(--f); font-size: 12.5px; font-weight: 700; color: var(--n500);
+  background: transparent; border: none; border-bottom: 3px solid transparent;
+  padding: 5px 12px 7px; cursor: pointer; transition: all .15s;
+}
+.dm-tabs button:hover { color: var(--blue); }
+.dm-tabs button.on { color: var(--blue); border-bottom-color: var(--blue); }
+
+.dm-cvwrap { position: relative; flex: 1; min-height: 0; }
+.dm-cv { width: 100%; height: 100%; display: block; cursor: crosshair; }
+.dm-tip {
+  position: absolute; display: none; transform: translate(-50%, -118%);
+  background: var(--navy); color: #fff; font-size: 12.5px; line-height: 1.32;
+  padding: 7px 11px; border-radius: 7px; pointer-events: none; white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(9,11,82,.32);
+}
+.dm-tip b { color: var(--green); font-size: 15px; }
+
+.dm-mets { flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+.dm-m { background: var(--n50); border-radius: 9px; padding: 8px 11px; position: relative; }
+.dm-m span { display: block; font-size: 11px; font-weight: 700; color: var(--n500); }
+.dm-m b { display: block; white-space: nowrap; font-size: 19px; font-weight: 900; color: var(--blue); letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.dm-m i { position: absolute; right: 10px; top: 9px; font-style: normal; font-size: 11px; font-weight: 700; }
+.dm-m i.dn { color: var(--greend); }
+.dm-m i.up { color: var(--mag); }
+
+/* ── controles ───────────────────────────────────────────────────────────── */
+.dm-bot { flex: 0 0 auto; margin-top: 12px; }
+.dm-chips { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.dm-chips .dlbl { font-size: 12px; font-weight: 700; color: var(--n500); margin-right: 4px; }
+.dm-chips button {
+  font-family: var(--f); font-size: 13px; font-weight: 700; color: var(--navy);
+  background: #fff; border: 1.5px solid var(--n200); border-radius: 16px;
+  padding: 6px 15px; cursor: pointer; transition: all .15s;
+}
+.dm-chips button:hover { border-color: var(--blue); color: var(--blue); }
+.dm-chips button.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.dm-chips button.clr { color: var(--n400); border-style: dashed; font-weight: 500; }
+
+/* Tarjeta flotante del control: NO ocupa layout, así no puede empujar nada ni
+   parpadear, y no necesita recortar el texto para entrar. */
+.dm-info {
+  position: absolute; left: 34px; right: 34px; bottom: 132px; z-index: 20;
+  background: #fff; border-radius: 12px; padding: 15px 20px;
+  border-left: 5px solid var(--blue);
+  box-shadow: 0 18px 48px rgba(9, 11, 82, .22), 0 2px 8px rgba(9, 11, 82, .1);
+  display: none;
+}
+.dm-info.on { display: block; }
+.dm-info .i-h { display: flex; justify-content: space-between; align-items: baseline;
+  gap: 18px; margin-bottom: 6px; }
+.dm-info .i-h b { font-size: 17px; color: var(--navy); line-height: 1.15; }
+.dm-info .i-nodo { font-family: var(--fm); font-size: 11.5px; color: var(--blue);
+  white-space: nowrap; }
+.dm-info .i-d { font-size: 13.5px; line-height: 1.4; color: var(--ink); }
+.dm-info .i-w { font-size: 13.5px; line-height: 1.4; color: var(--n500); margin-top: 5px; }
+.dm-info .i-w i { color: var(--navy); font-style: normal; font-weight: 700; }
+.dm-info .i-n { display: flex; gap: 26px; margin-top: 11px; padding-top: 10px;
+  border-top: 1px solid var(--n100); }
+.dm-info .i-n span { font-size: 13px; color: var(--ink); font-weight: 600; }
+.dm-info .i-n em { display: block; font-style: normal; font-size: 10px;
+  font-family: var(--fm); color: var(--n400); font-weight: 400; margin-bottom: 1px; }
+.dm-info .i-n b.pos { color: var(--greend); }
+.dm-info .i-n b.neg { color: var(--mag); }
+
+/* pista fija, sin contenido variable: no cambia de alto nunca */
+.dm-pista { margin-top: 8px; font-size: 12.5px; color: var(--n500); }
+.dm-pista b { color: var(--navy); }
+
+.dm-sliders { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 26px; margin-top: 9px; }
+.dm-c { display: grid; grid-template-columns: 138px 1fr 50px; align-items: center; gap: 10px; }
+.dm-c label { font-size: 12px; font-weight: 700; color: var(--ink); }
+.dm-c.dmag label { color: var(--mag); }
+.dm-c b { font-size: 13px; font-weight: 800; color: var(--blue); text-align: right; font-variant-numeric: tabular-nums; }
+.dm-c.dmag b { color: var(--mag); }
+.dm-c input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; background: var(--n200); outline: none; }
+.dm-c input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--blue); border: 3px solid #fff; box-shadow: 0 1px 6px rgba(9,11,82,.4); cursor: pointer;
+}
+.dm-c.dmag input[type=range]::-webkit-slider-thumb { background: var(--mag); }
+
+/* el valor del que se movió cada nodo: la referencia es la BASE, no el frame
+   anterior — en escena importa cuánto te alejaste del punto de partida */
+.dm-n .was { display: none; }
+.dm-n.chg { box-shadow: 0 0 0 2px rgba(179, 0, 92, .55); }
+.dm-n.chg .was {
+  display: block; font-family: var(--fm); font-size: 9.5px; line-height: 1;
+  color: var(--mag); margin-top: 3px; text-decoration: line-through;
+  text-decoration-color: rgba(179, 0, 92, .45);
+}
+/* sobre los nodos con fondo oscuro el magenta no se lee: los niveles 0 y 1 van
+   en rosa claro. El nivel 2 tiene fondo blanco y se queda con el magenta. */
+.dm-n.lv0.chg .was, .dm-n.lv1.chg .was {
+  color: #FFCCE4; text-decoration-color: rgba(255, 204, 228, .6);
+}
+
+/* pasar el mouse por una palanca ilumina el nodo que alimenta y su camino
+   hasta la raíz: la propagación que se cuenta hablando, dibujada */
+.dm-n { transition: box-shadow .16s ease, transform .16s ease; }
+.dm-n.dhl { transform: translate(-50%, -2px) scale(1.03); z-index: 5;
+  box-shadow: 0 0 0 3px var(--green), 0 10px 26px rgba(3, 255, 158, .3); }
+#dm-svg path { transition: stroke .16s ease, stroke-width .16s ease; }
+#dm-svg path.dhl { stroke: var(--green); stroke-width: 5; }
+
+/* palancas: la marca del valor declarado */
+/* el input dejó de ser hijo directo del grid al envolverlo, así que ya no se
+   estira solo: sin esto toma su ancho intrínseco y la marca del valor declarado
+   queda midiendo contra un riel más largo que el recorrido real del pulgar */
+.dm-c .rail { position: relative; display: block; width: 100%; }
+.dm-c .rail input[type=range] { display: block; width: 100%; margin: 0; }
+/* el pulgar mide 17px y no recorre el 100% del riel: sin descontarlo, la marca
+   del valor declarado queda corrida justo donde tiene que coincidir */
+.dm-c .rail .base {
+  position: absolute; top: 50%; width: 2px; height: 15px; margin-top: -7.5px;
+  margin-left: -1px; background: var(--n400); border-radius: 1px; pointer-events: none;
+}
+.dm-c.dmag .rail .base { background: rgba(179, 0, 92, .5); }
+
+/* controles: el color dice qué rama tocan, y el costo deja de ser un secreto */
+.dm-chips button i {
+  display: block; font-style: normal; font-family: var(--fm); font-size: 9.5px;
+  font-weight: 400; color: var(--n400); margin-top: 2px; letter-spacing: 0;
+}
+.dm-chips button.on i { color: rgba(255, 255, 255, .72); }
+.dm-chips button.frec { border-color: #BBD0FF; }
+.dm-chips button.dmag { border-color: #F3C2DA; }
+.dm-chips button.dmag.on { background: var(--mag); border-color: var(--mag); }
+
+/* el capital económico sostiene la tesis de la charla: no puede pesar igual */
+/* ⚠ prefijado: `.cap` a secas es el pie de figura del deck (italic + centrado) y
+   se lo comía. Las clases cortas de este deck están tomadas — usar dm-*. */
+/* En proyector el fondo oscuro se lee como APAGADO, no como importante — y ésta
+   es la métrica que sostiene la tesis de la charla. Va al revés: fondo claro con
+   el acento fuerte a la izquierda. */
+.dm-m.dm-cap { background: #fff; box-shadow: inset 4px 0 0 var(--navy), 0 2px 10px rgba(9,11,82,.10); }
+.dm-m.dm-cap span { color: var(--navy); }
+.dm-m.dm-cap b { color: var(--navy); }
+
+/* el panel de detalle crecía hasta el borde y dejaba un hueco muerto grande
+   justo donde cae el ojo */
+.dm-det { align-self: start; }
+/* ═══════════════════════════════════════════════════════════════════════════
+   DEMO · TRES MODOS + LA LÍNEA DE DECISIÓN
+   El tablero fijo mostraba todo con el mismo peso: cuando se explica el árbol,
+   el gráfico compite; cuando se muestra la curva, compite el árbol. Los modos
+   siguen los tramos del guion — y lo que no manda no se va, se achica.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.dm-hd-r { display: flex; align-items: center; gap: 16px; flex: 0 0 auto; }
+.dm-modos { display: flex; gap: 4px; background: var(--n100); border-radius: 9px; padding: 3px; }
+.dm-modos button {
+  font-family: var(--fm); font-size: 11px; font-weight: 700; color: var(--n500);
+  background: transparent; border: none; border-radius: 7px; padding: 5px 11px;
+  cursor: pointer; transition: all .15s; letter-spacing: .02em;
+}
+.dm-modos button:hover { color: var(--navy); }
+.dm-modos button.on { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(9,11,82,.16); }
+
+.dm-main, .dm-tree, .dm-cvwrap, .dm-det { transition: all .28s cubic-bezier(.4,0,.2,1); }
+
+/* a · EL ÁRBOL — la propagación es la protagonista */
+.demo.m-arbol .dm-main { grid-template-columns: 1.34fr 1fr; }
+.demo.m-arbol .dm-tree { height: 262px; }
+.demo.m-arbol .dm-n .nm { font-size: 19px; }
+
+/* s · EL RESULTADO — manda la curva; el árbol queda de referencia.
+   ⚠ El árbol NO se puede comprimir achicando la columna: los nodos tienen ancho
+   fijo en píxeles y a menos de ~570px se montan unos sobre otros. Se ESCALA:
+   se le da un ancho lógico mayor, se reduce con scale y se descuenta el alto
+   sobrante con un margen negativo. Así conserva sus proporciones y no se pisa. */
+.demo.m-resultado .dm-main { grid-template-columns: .62fr 1fr; }
+.demo.m-resultado .dm-tree {
+  width: 147%; height: 244px; transform: scale(.68); transform-origin: top left;
+  margin-bottom: -78px;
+}
+.demo.m-resultado .dm-n small { display: none; }
+.demo.m-resultado .dm-det h5 { font-size: 14px; }
+.demo.m-resultado .dm-det p { display: none; }
+.demo.m-resultado .dm-det td { font-size: 12px; }
+
+/* la línea de decisión */
+.dm-deal {
+  flex: 0 0 auto; display: none; align-items: baseline; flex-wrap: wrap; gap: 0 14px;
+  margin-top: 12px; padding: 12px 20px; border-radius: 11px;
+  background: linear-gradient(92deg, #061034 0%, #0A1A52 100%);
+  box-shadow: 0 8px 26px rgba(6, 16, 52, .28);
+}
+.dm-deal.on { display: flex; }
+.dm-deal .q { font-size: 15px; font-weight: 800; color: var(--green); letter-spacing: -.01em; }
+.dm-deal .c, .dm-deal .e { font-size: 15px; color: rgba(255, 255, 255, .8); }
+.dm-deal b { color: #fff; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dm-deal .fl { color: rgba(255, 255, 255, .38); font-size: 17px; }
+.dm-deal .r {
+  margin-left: auto; font-family: var(--fm); font-size: 17px; font-weight: 700;
+  padding: 3px 12px; border-radius: 8px;
+}
+.dm-deal .r.pos { background: rgba(3, 255, 158, .16); color: var(--green); }
+.dm-deal .r.neg { background: rgba(255, 122, 184, .16); color: #FF7AB8; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TEMA EKO — la demo con el lenguaje visual del deck (navy + grilla, verde / coral / ámbar)
+   Se pisan sólo colores y tipografías: la geometría es la del deck de ISACA.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.demo-slide{--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.12);--ink2:#C3C9EE;--mute:#8A92C4;--blue2:#4C86FF;--coral:#FF5A36;--amb:#FFC53D;color:#EEF1FF}
+.demo-slide .dm-t{font-family:var(--fh);font-size:26px;font-weight:700;color:#EEF1FF;letter-spacing:-.01em}
+.demo-slide .dm-t::before{content:'</ en vivo > ';font-family:var(--fm);font-size:12px;font-weight:400;color:var(--green);letter-spacing:.04em;vertical-align:4px;margin-right:6px}
+.demo-slide .dm-s{color:var(--mute);font-family:var(--fm);font-size:12px}
+.demo-slide .dm-act{color:var(--mute)} .demo-slide .dm-act.on{color:var(--green)}
+.demo-slide .dm-modos{background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.demo-slide .dm-modos button{color:var(--mute)}
+.demo-slide .dm-modos button:hover{color:#EEF1FF}
+.demo-slide .dm-modos button.on{background:rgba(3,255,158,.14);color:var(--green);box-shadow:none}
+
+/* árbol */
+.demo-slide .dtn{background:var(--card);border:1px solid rgba(76,134,255,.45)}
+.demo-slide .dtn .sg{color:var(--blue2)}
+.demo-slide .dtn .nm{color:#EEF1FF;font-family:var(--fh)}
+.demo-slide .dtn small{color:var(--mute)}
+.demo-slide .dtn.lv0{background:#10156a;border-color:var(--green);box-shadow:0 0 26px rgba(3,255,158,.22)}
+.demo-slide .dtn.lv0 .sg,.demo-slide .dtn.lv0 .nm{color:var(--green)}
+.demo-slide .dtn.lv0 small{color:var(--ink2)}
+.demo-slide .dtn.lv1{background:rgba(76,134,255,.18);border-color:var(--blue2)}
+.demo-slide .dtn.lv1 .sg{color:var(--green)}
+.demo-slide .dtn.lv1 .nm{color:#fff}
+.demo-slide .dtn.lv1 small{color:var(--ink2)}
+.demo-slide .dtn[data-k="sl"]{border-color:rgba(255,90,54,.55);background:rgba(255,90,54,.08)}
+.demo-slide .dtn[data-k="sl"] .sg{color:var(--coral)}
+.demo-slide .dop{background:#070820;border-color:var(--mute);color:#EEF1FF}
+.demo-slide .dm-n:hover{box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.demo-slide .dm-n.sel{box-shadow:0 0 0 3px rgba(76,134,255,.55)}
+.demo-slide .dm-n.lv0.sel,.demo-slide .dm-n.lv1.sel{box-shadow:0 0 0 3px rgba(3,255,158,.55),0 0 26px rgba(3,255,158,.22)}
+.demo-slide .dm-n.chg{box-shadow:0 0 0 2px rgba(255,90,54,.7)}
+.demo-slide .dm-n.chg .was,.demo-slide .dm-n.lv0.chg .was,.demo-slide .dm-n.lv1.chg .was{color:#FF9C85;text-decoration-color:rgba(255,156,133,.6)}
+.demo-slide .dm-n.dhl{box-shadow:0 0 0 3px var(--green),0 10px 26px rgba(3,255,158,.3)}
+
+/* detalle del nodo */
+.demo-slide .dm-det{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--blue2)}
+.demo-slide .dm-det h5{color:#EEF1FF;font-family:var(--fh);font-size:18px}
+.demo-slide .dm-det p{color:var(--mute)}
+.demo-slide .dm-det td{color:var(--ink2)}
+.demo-slide .dm-det td:last-child{color:var(--blue2);font-family:var(--fh)}
+.demo-slide .dm-det tr.tot td{border-top-color:var(--line);color:#EEF1FF}
+.demo-slide .dm-det tr.tot td:last-child{color:var(--green)}
+.demo-slide .dm-det em{color:var(--mute)}
+
+/* vistas y métricas */
+.demo-slide .dm-tabs button{color:var(--mute);white-space:nowrap}
+.demo-slide .dm-tabs button:hover{color:#EEF1FF}
+.demo-slide .dm-tabs button.on{color:var(--green);border-bottom-color:var(--green)}
+.demo-slide .dm-tip{background:#10156a;border:1px solid rgba(3,255,158,.4);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.demo-slide .dm-m{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--green)}
+.demo-slide .dm-m span{color:var(--mute);font-family:var(--fm);font-weight:400}
+.demo-slide .dm-m b{font-family:var(--fh);font-weight:700;font-size:21px;color:var(--green)}
+.demo-slide .dm-m:nth-child(2){border-left-color:var(--coral)}
+.demo-slide .dm-m:nth-child(2) b{color:var(--coral)}
+.demo-slide .dm-m:nth-child(3){border-left-color:var(--amb)}
+.demo-slide .dm-m:nth-child(3) b{color:var(--amb)}
+.demo-slide .dm-m.dm-cap{background:rgba(255,255,255,.07);box-shadow:none;border-left-color:#EEF1FF}
+.demo-slide .dm-m.dm-cap span,.demo-slide .dm-m.dm-cap b{color:#EEF1FF}
+.demo-slide .dm-m i.dn{color:var(--green)}
+.demo-slide .dm-m i.up{color:var(--coral)}
+
+/* controles */
+.demo-slide .dm-chips .dlbl{color:var(--mute);font-family:var(--fm);font-weight:400}
+.demo-slide .dm-chips button{background:var(--card);color:#EEF1FF;border:1.5px solid var(--line)}
+.demo-slide .dm-chips button:hover{border-color:var(--green);color:var(--green)}
+.demo-slide .dm-chips button.frec{border-color:rgba(76,134,255,.45)}
+.demo-slide .dm-chips button.dmag{border-color:rgba(255,90,54,.45)}
+.demo-slide .dm-chips button.on{background:var(--blue2);border-color:var(--blue2);color:#fff}
+.demo-slide .dm-chips button.dmag.on{background:var(--coral);border-color:var(--coral)}
+.demo-slide .dm-chips button i{color:var(--mute)}
+.demo-slide .dm-chips button.on i{color:rgba(255,255,255,.8)}
+.demo-slide .dm-chips button.clr{color:var(--mute);border-style:dashed;background:transparent}
+.demo-slide .dm-info{background:#0d1040;border:1px solid var(--line);border-left:5px solid var(--blue2);box-shadow:0 18px 48px rgba(0,0,0,.55)}
+.demo-slide .dm-info .i-h b{color:#EEF1FF;font-family:var(--fh)}
+.demo-slide .dm-info .i-nodo{color:var(--blue2)}
+.demo-slide .dm-info .i-d,.demo-slide .dm-info .i-n span{color:var(--ink2)}
+.demo-slide .dm-info .i-w{color:var(--mute)}
+.demo-slide .dm-info .i-w i{color:#EEF1FF}
+.demo-slide .dm-info .i-n{border-top-color:var(--line)}
+.demo-slide .dm-info .i-n em{color:var(--mute)}
+.demo-slide .dm-info .i-n b.pos{color:var(--green)}
+.demo-slide .dm-info .i-n b.neg{color:var(--coral)}
+.demo-slide .dm-pista{color:var(--mute)}
+.demo-slide .dm-pista b{color:#EEF1FF}
+.demo-slide .dm-c label{color:var(--ink2)}
+.demo-slide .dm-c.dmag label{color:var(--coral)}
+.demo-slide .dm-c b{color:var(--blue2);font-family:var(--fh)}
+.demo-slide .dm-c.dmag b{color:var(--coral)}
+.demo-slide .dm-c.drag label{color:var(--green)}
+.demo-slide .dm-c input[type=range]{background:rgba(255,255,255,.14)}
+.demo-slide .dm-c input[type=range]::-webkit-slider-thumb{background:var(--blue2);border-color:#070820;box-shadow:0 0 10px rgba(76,134,255,.6)}
+.demo-slide .dm-c.dmag input[type=range]::-webkit-slider-thumb{background:var(--coral);box-shadow:0 0 10px rgba(255,90,54,.6)}
+.demo-slide .dm-c.drag input[type=range]::-webkit-slider-thumb{background:var(--green);box-shadow:0 0 14px rgba(3,255,158,.8)}
+.demo-slide .dm-c .rail .base{background:rgba(255,255,255,.55)}
+.demo-slide .dm-c.dmag .rail .base{background:rgba(255,90,54,.6)}
+
+/* la línea de decisión */
+.demo-slide .dm-deal{background:rgba(3,255,158,.06);border:1px solid rgba(3,255,158,.35);box-shadow:none}
+.demo-slide .dm-deal .r.neg{background:rgba(255,90,54,.16);color:var(--coral)}
+
+/* piloto */
+.demo-slide .dm-auto{background:rgba(255,255,255,.05);border-color:var(--line);color:var(--mute);font-family:var(--fm)}
+.demo-slide .dm-auto::before{background:var(--mute)}
+.demo-slide .dm-auto.on{color:var(--green);border-color:rgba(3,255,158,.4)}
+.demo-slide .dm-auto.on::before{background:var(--green)}

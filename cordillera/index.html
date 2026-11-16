@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Banco Cordillera · demo FAIR en vivo</title>
+<link rel="stylesheet" href="demo.css">
+<style>
+:root{--bg:#070820;--bg2:#0C0F33;--navy:#090B52;--blue:#0054F2;--blue2:#4C86FF;--green:#03FF9E;--coral:#FF5A36;--amber:#FFC53D;
+  --ink:#EEF1FF;--ink2:#C3C9EE;--mute:#8A92C4;--line:rgba(255,255,255,.12);--card:rgba(255,255,255,.045);color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Segoe UI','Helvetica Neue',system-ui,sans-serif}
+.wrap{max-width:1600px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-left,0px)) 40px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+header h1{font-family:'Bahnschrift','DIN Alternate','Segoe UI',sans-serif;font-size:24px;margin:0}
+header p{margin:4px 0 0;color:var(--mute);font-size:14px}
+header img{height:26px}
+.stage-wrap{position:relative;width:100%;overflow:hidden;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+.stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;
+  background:radial-gradient(900px 600px at 88% -10%,rgba(0,84,242,.28),transparent 60%),
+             radial-gradient(700px 500px at -5% 110%,rgba(3,255,158,.10),transparent 60%),var(--bg2)}
+.ayuda{margin-top:16px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));font-size:14px;color:var(--ink2)}
+.ayuda div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.ayuda b{color:var(--ink)}
+kbd{font-family:'Cascadia Code',Consolas,monospace;font-size:12px;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.pie{margin-top:18px;font-size:13px;color:var(--mute)}
+.pie a{color:var(--blue2)}
+.rot{display:none;margin-top:10px;font-size:13px;color:var(--amber)}
+@media (max-width:700px) and (orientation:portrait){.rot{display:block}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Banco Cordillera · el modelo FAIR en vivo</h1>
+      <p>El caso completo del taller: árbol FAIR, cinco controles, curva de excedencia, distribución, componentes y qué mueve el resultado.</p>
+    </div>
+    <img src="safe-u-logo-blanco.png" alt="Safe-U">
+  </header>
+  <div class="stage-wrap" id="wrap"><div class="stage demo-slide" id="stage"><div class="demo-wrap"><div class="demo" id="demo-host"></div></div></div></div>
+  <p class="rot">En el teléfono se ve mejor con la pantalla en horizontal.</p>
+  <div class="ayuda">
+    <div><b>Piloto automático.</b> La demo arranca sola y repite la secuencia. Cualquier clic la pasa a manual; <kbd>P</kbd> o el botón de arriba a la derecha retoma el piloto.</div>
+    <div><b>Controles.</b> Los botones encienden y apagan cada control por separado. Con el teclado, <kbd>1</kbd> a <kbd>5</kbd> los suman en orden y <kbd>X</kbd> los saca todos.</div>
+    <div><b>Vistas.</b> <kbd>Q</kbd> curva, <kbd>W</kbd> distribución, <kbd>E</kbd> componentes, <kbd>R</kbd> qué mueve. <kbd>A</kbd> árbol y <kbd>S</kbd> resultado. Un clic en un nodo del árbol abre su composición y los controles deslizantes mueven cada hoja.</div>
+  </div>
+  <p class="pie">Banco Cordillera es un banco ficticio y todos los números son ilustrativos. Las combinaciones de controles están precalculadas con 400.000 escenarios; al mover un control deslizante se simula en vivo con menos. Simulador general: <a href="../">joacogalermes.github.io/simulador-fair</a> · Safe-U</p>
+</div>
+<script src="fair.js"></script>
+<script src="fair_data.js"></script>
+<script src="demo.js"></script>
+<script>
+(function(){
+  var wrap=document.getElementById('wrap'),stage=document.getElementById('stage');
+  function fit(){var s=wrap.clientWidth/1920;stage.style.transform='scale('+s+')';wrap.style.height=(1080*s)+'px';}
+  window.addEventListener('resize',fit);fit();
+  if(!window.DEMO)return;
+  window.DEMO.montar(document.getElementById('demo-host'));
+  window.DEMO.auto(false);window.DEMO.tecla('x',true);window.DEMO.tecla('q',true);
+  setTimeout(function(){window.DEMO.auto(true);},1200);
+  document.addEventListener('keydown',function(e){
+    if(e.ctrlKey||e.metaKey||e.altKey)return;
+    var t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'))return;
+    if(e.key.length===1&&window.DEMO.tecla(e.key))e.preventDefault();
+  });
+})();
+</script>
+</body>
+</html>
